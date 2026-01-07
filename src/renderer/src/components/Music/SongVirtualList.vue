@@ -214,9 +214,6 @@ const playlists = ref<SongList[]>([])
 // 选中的歌曲
 const selectedSongs = ref<Song[]>([])
 
-// 鼠标框选的歌曲
-const rangeSongs = ref<Song[]>([])
-
 const hasScroll = computed(() => {
   // 判断是否有滚动条
   return !!(
@@ -573,7 +570,6 @@ const onMouseDown = (e: MouseEvent, song: Song) => {
   if (e.button !== 0) return // 只认左键
   if (!(e.ctrlKey || e.metaKey) && !e.shiftKey) isDrag.value = true // 仅允许没有按下组合键时，鼠标拖拽
   mouseDownIndex.value = props.songs.findIndex((item) => item.id === song.id) // 记录鼠标按下时的歌曲下标
-  rangeSongs.value = [] // 重置鼠标移动范围的歌曲为空
 }
 
 // 鼠标移动事件
@@ -582,11 +578,10 @@ const onMouseMove = (e: MouseEvent, song: Song) => {
 
   const startIndex = mouseDownIndex.value // 获取鼠标按下时的歌曲下标
   const endIndex = props.songs.findIndex((item) => item.id === song.id) // 获取鼠标移动到的歌曲下标
-  rangeSongs.value = props.songs.slice(
+  selectedSongs.value = props.songs.slice(
     Math.min(startIndex, endIndex),
     Math.max(startIndex, endIndex) + 1
-  ) // 获取鼠标移动范围的歌曲
-  selectedSongs.value = rangeSongs.value // 设置选中歌曲为鼠标移动范围的歌曲
+  ) // 设置选中歌曲为鼠标移动范围的歌曲
 }
 
 // 鼠标抬起事件
@@ -624,8 +619,8 @@ const onMouseUp = (e: MouseEvent, song: Song) => {
   }
   // 鼠标抬起时，取消拖拽
   isDrag.value = false
-  // 如果鼠标移动范围的歌曲为空（即未拖拽），按鼠标点击处理
-  if (rangeSongs.value.length === 0) {
+  // 鼠标按下时的歌曲未选中（鼠标未移动时）
+  if (selectedSongs.value.every((item) => item.id !== props.songs[mouseDownIndex.value].id)) {
     // 选中当前歌曲
     selectedSongs.value = [song]
   }
