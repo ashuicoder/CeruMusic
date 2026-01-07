@@ -19,6 +19,10 @@
             v-for="(song, index) in visibleItems"
             :key="`${song.source || ''}-${song.songmid}-${song.albumId || ''}-${index}`"
             class="song-item"
+            :class="selectedSongs.some((item) => item.id === song.id) ? 'is-selected' : ''"
+            @mousedown="(e) => onMouseDown(e, song)"
+            @mousemove="(e) => onMouseMove(e, song)"
+            @mouseup="(e) => onMouseUp(e, song)"
             @mouseenter="hoveredSong = song.id || song.songmid"
             @mouseleave="hoveredSong = null"
             @contextmenu="handleContextMenu($event, song)"
@@ -207,6 +211,12 @@ const contextMenuSong = ref<Song | null>(null)
 // 歌单列表
 const playlists = ref<SongList[]>([])
 
+// 选中的歌曲
+const selectedSongs = ref<Song[]>([])
+
+// 鼠标框选的歌曲
+const rangeSongs = ref<Song[]>([])
+
 const hasScroll = computed(() => {
   // 判断是否有滚动条
   return !!(
@@ -266,12 +276,12 @@ const handleSongClick = (song: Song) => {
     handlePlay(song)
     lastClickTime = 0 // 重置时间，防止三击
   } else {
-    // 单击：延迟执行添加到播放列表
-    lastClickTime = currentTime
-    clickTimer = setTimeout(() => {
-      handleAddToPlaylist(song)
-      clickTimer = null
-    }, doubleClickDelay)
+    // // 单击：延迟执行添加到播放列表
+    // lastClickTime = currentTime
+    // clickTimer = setTimeout(() => {
+    //   handleAddToPlaylist(song)
+    //   clickTimer = null
+    // }, doubleClickDelay)
   }
 }
 
@@ -550,11 +560,100 @@ onMounted(async () => {
     await loadPlaylists()
     await loadFavorites()
   })
+
+  window.addEventListener('keydown', onKeyDown)
 })
+
+const isDrag = ref(false)
+// 鼠标按下时的歌曲下标
+const mouseDownIndex = ref(-1)
+
+// 鼠标按下事件
+const onMouseDown = (e: MouseEvent, song: Song) => {
+  if (e.button !== 0) return // 只认左键
+  if (!(e.ctrlKey || e.metaKey) && !e.shiftKey) isDrag.value = true // 仅允许没有按下组合键时，鼠标拖拽
+  mouseDownIndex.value = props.songs.findIndex((item) => item.id === song.id) // 记录鼠标按下时的歌曲下标
+  rangeSongs.value = [] // 重置鼠标移动范围的歌曲为空
+}
+
+// 鼠标移动事件
+const onMouseMove = (e: MouseEvent, song: Song) => {
+  if (e.button !== 0 || !isDrag.value) return // 只认左键
+
+  const startIndex = mouseDownIndex.value // 获取鼠标按下时的歌曲下标
+  const endIndex = props.songs.findIndex((item) => item.id === song.id) // 获取鼠标移动到的歌曲下标
+  rangeSongs.value = props.songs.slice(
+    Math.min(startIndex, endIndex),
+    Math.max(startIndex, endIndex) + 1
+  ) // 获取鼠标移动范围的歌曲
+  selectedSongs.value = rangeSongs.value // 设置选中歌曲为鼠标移动范围的歌曲
+}
+
+// 鼠标抬起事件
+const onMouseUp = (e: MouseEvent, song: Song) => {
+  if (e.button !== 0) return // 只认左键
+  // 按下Ctrl/Command时，切换选中歌曲
+  if (e.ctrlKey || e.metaKey) {
+    // 判断歌曲是否已选中
+    if (selectedSongs.value.some((item1) => item1.id === song.id)) {
+      // 已选中，移除该歌曲
+      selectedSongs.value = selectedSongs.value.filter((item2) => item2.id !== song.id)
+    } else {
+      // 未选中，添加该歌曲
+      selectedSongs.value.push(song)
+    }
+    return
+  }
+  // 按下Shift时，批量选中歌曲
+  if (e.shiftKey) {
+    // 判断是否有选中歌曲
+    if (selectedSongs.value.length === 0) {
+      // 无选中歌曲，设置选中歌曲为当前歌曲
+      selectedSongs.value = [song]
+    } else {
+      // 有选中歌曲，设置选中歌曲为最后一首选择歌曲到当前歌曲
+      const lastSong = selectedSongs.value[selectedSongs.value.length - 1]
+      const currentIndex = props.songs.findIndex((item) => item.id === song.id)
+      const lastIndex = props.songs.findIndex((item) => item.id === lastSong.id)
+      selectedSongs.value = props.songs.slice(
+        Math.min(currentIndex, lastIndex),
+        Math.max(currentIndex, lastIndex) + 1
+      )
+    }
+    return
+  }
+  // 鼠标抬起时，取消拖拽
+  isDrag.value = false
+  // 如果鼠标移动范围的歌曲为空（即未拖拽），按鼠标点击处理
+  if (rangeSongs.value.length === 0) {
+    // 选中当前歌曲
+    selectedSongs.value = [song]
+  }
+
+  console.log('song: ', song)
+  console.log('selectedSongs: ', selectedSongs.value)
+}
+
+// 按键按下事件
+const onKeyDown = (e: KeyboardEvent) => {
+  // 按下Ctrl/Command+A时，切换选中所有歌曲
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    // 判断是否已全选
+    if (selectedSongs.value.length === props.songs.length) {
+      // 已经全选，取消全选
+      selectedSongs.value = []
+    } else {
+      // 未全选，全选
+      selectedSongs.value = props.songs
+    }
+  }
+}
 
 onUnmounted(() => {
   // 清理事件监听器
   window.removeEventListener('playlist-updated', loadPlaylists)
+  // 移除按键按下事件监听器
+  window.removeEventListener('keydown', onKeyDown)
 })
 </script>
 
@@ -660,6 +759,18 @@ onUnmounted(() => {
 
       .col-album .album-name {
         color: var(--song-list-album-hover);
+      }
+    }
+
+    &.is-selected {
+      background: var(--song-list-item-selected);
+
+      .col-title .song-info .song-title {
+        color: var(--song-list-title-selected);
+      }
+
+      .col-album .album-name {
+        color: var(--song-list-album-selected);
       }
     }
 

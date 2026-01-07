@@ -220,14 +220,17 @@
   --song-list-content-bg: var(--theme-bg-primary);
   --song-list-item-border: #f5f5f5;
   --song-list-item-hover: #f5f5f5;
+  --song-list-item-selected: #f5f5f5;
   --song-list-item-current: #f0f7ff;
   --song-list-item-playing: #e6f7ff;
   --song-list-track-number: #999999;
   --song-list-title-color: #333333;
   --song-list-title-hover: var(--td-brand-color);
+  --song-list-title-selected: var(--td-brand-color);
   --song-list-artist-color: #999999;
   --song-list-album-color: #999999;
   --song-list-album-hover: var(--td-brand-color);
+  --song-list-album-selected: var(--td-brand-color);
   --song-list-duration-color: #999999;
   --song-list-btn-color: #cccccc;
   --song-list-btn-hover: var(--td-brand-color);
