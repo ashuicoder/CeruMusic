@@ -39,6 +39,8 @@ import { HeartIcon, DownloadIcon, CheckIcon, LockOnIcon } from 'tdesign-icons-vu
 import _ from 'lodash'
 import { songListAPI } from '@renderer/api/songList'
 
+import defaultCoverImg from '/default-cover.png'
+
 const controlAudio = ControlAudioStore()
 const localUserStore = LocalUserDetailStore()
 const { Audio } = storeToRefs(controlAudio)
